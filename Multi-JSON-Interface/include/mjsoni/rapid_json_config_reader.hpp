@@ -1344,7 +1344,7 @@ void RapidJsonConfigReader::SetUnsignedLong(
     const Args&... additional_keys
 ) {
   this->SetValue(
-      rapidjson::Value(value),
+      rapidjson::Value(static_cast<unsigned int>(value)),
       first_key,
       additional_keys...
   );
@@ -1358,7 +1358,7 @@ void RapidJsonConfigReader::SetDeepUnsignedLong(
     const Args&... additional_keys
 ) {
   this->SetDeepValue(
-      rapidjson::Value(value),
+      rapidjson::Value(static_cast<unsigned int>(value)),
       first_key,
       additional_keys...
   );

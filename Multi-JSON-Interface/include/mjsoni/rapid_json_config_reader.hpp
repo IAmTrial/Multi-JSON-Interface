@@ -38,7 +38,7 @@ using RapidJsonConfigReader = GenericConfigReader<rapidjson::Document, rapidjson
 /* Constructors and Destructors */
 
 template <>
-RapidJsonConfigReader::GenericConfigReader(
+inline RapidJsonConfigReader::GenericConfigReader(
     std::filesystem::path config_file_path
 ) : config_file_path_(std::move(config_file_path)) {
 }
@@ -1844,7 +1844,7 @@ void RapidJsonConfigReader::SetDeepValueRecursive(
 }
 
 template <>
-bool RapidJsonConfigReader::Read() {
+inline bool RapidJsonConfigReader::Read() {
   // Create the config file if it doesn't exist.
   if (!std::filesystem::exists(this->config_file_path())) {
     if (std::ofstream config_stream(this->config_file_path());
@@ -1867,7 +1867,7 @@ bool RapidJsonConfigReader::Read() {
 }
 
 template <>
-bool RapidJsonConfigReader::Write(int indent_width) {
+inline bool RapidJsonConfigReader::Write(int indent_width) {
   // Write to the config file any new default values.
   if (std::ofstream config_stream(this->config_file_path());
       config_stream) {

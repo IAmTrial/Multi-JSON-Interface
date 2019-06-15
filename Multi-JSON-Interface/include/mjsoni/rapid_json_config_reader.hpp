@@ -1848,10 +1848,11 @@ inline bool RapidJsonConfigReader::Read() {
   // Create the config file if it doesn't exist.
   if (!std::filesystem::exists(this->config_file_path())) {
     if (std::ofstream config_stream(this->config_file_path());
-        config_stream)
-    config_stream << u8"{}" << std::endl;
-  } else {
-    return false;
+        config_stream) {
+      config_stream << u8"{}" << std::endl;
+    } else {
+      return false;
+    }
   }
 
   // Parse the config.

@@ -35,7 +35,13 @@ namespace mjsoni {
 
 using RapidJsonConfigReader = GenericConfigReader<rapidjson::Document, rapidjson::Value, rapidjson::Value>;
 
-extern RapidJsonConfigReader;
+/* Constructors and Destructors */
+
+template <>
+RapidJsonConfigReader::GenericConfigReader(
+    std::filesystem::path config_file_path
+) : config_file_path_(std::move(config_file_path)) {
+}
 
 /* Functions for Generic Types */
 
@@ -45,14 +51,10 @@ bool RapidJsonConfigReader::ContainsKey(
     std::string_view first_key,
     const Args&... additional_keys
 ) const {
-  std::vector<std::string_view> additional_keys_vector = {
-      additional_keys...
-  };
-
-  return this->ContainsKey(
+  return this->ContainsKeyRecursive(
       this->json_document(),
       first_key,
-      additional_keys_vector
+      additional_keys...
   );
 }
 
@@ -63,14 +65,10 @@ RapidJsonConfigReader::GetValueRef(
     std::string_view first_key,
     const Args&... additional_keys
 ) const {
-  std::vector<std::string_view> additional_keys_vector = {
-      additional_keys...
-  };
-
-  return this->GetValueRef(
+  return this->GetValueRefRecursive(
       this->json_document_,
       first_key,
-      additional_keys_vector
+      additional_keys...
   );
 }
 
@@ -195,15 +193,11 @@ void RapidJsonConfigReader::SetValue(
     std::string_view first_key,
     const Args&... additional_keys
 ) {
-  std::vector<std::string_view> additional_keys_vector = {
-      additional_keys...
-  };
-
-  this->SetValue(
+  this->SetValueRecursive(
       std::move(value),
       this->json_document_,
       first_key,
-      additional_keys_vector
+      additional_keys...
   );
 }
 
@@ -214,15 +208,11 @@ void RapidJsonConfigReader::SetDeepValue(
     std::string_view first_key,
     const Args&... additional_keys
 ) {
-  std::vector<std::string_view> additional_keys_vector = {
-      additional_keys...
-  };
-
-  this->SetDeepValue(
+  this->SetDeepValueRecursive(
       std::move(value),
       this->json_document_,
       first_key,
-      additional_keys_vector
+      additional_keys...
   );
 }
 
@@ -1693,190 +1683,164 @@ void RapidJsonConfigReader::SetDeepVector(
 /* Private Helper Functions */
 
 template <>
-rapidjson::Value& RapidJsonConfigReader::GetValueRef(
-    rapidjson::Value& object,
-    std::string_view current_key,
-    const std::vector<std::string_view>& additional_keys
-) {
-  // If this is the destination key, then return the value.
-  rapidjson::Value& entry = object[current_key.data()];
-
-  if (additional_keys.empty()) {
-    return entry;
-  }
-
-  // Otherwise, recurse one level down.
-  std::vector<std::string_view> remaining_keys(
-      additional_keys.begin() + 1,
-      additional_keys.end()
-  );
-
-  return GetValueRef(
-      entry,
-      additional_keys.front(),
-      remaining_keys
-  );
-}
-
-template <>
-const rapidjson::Value& RapidJsonConfigReader::GetValueRef(
+template <typename ...Args>
+bool RapidJsonConfigReader::ContainsKeyRecursive(
     const rapidjson::Value& object,
     std::string_view current_key,
-    const std::vector<std::string_view>& additional_keys
-) const {
-  // If this is the destination key, then return the value.
-  const rapidjson::Value& entry = object[current_key.data()];
-
-  if (additional_keys.empty()) {
-    return entry;
-  }
-
-  // Otherwise, recurse one level down.
-  std::vector<std::string_view> remaining_keys(
-      additional_keys.begin() + 1,
-      additional_keys.end()
-  );
-
-  return GetValueRef(
-      entry,
-      additional_keys.front(),
-      remaining_keys
-  );
-}
-
-template <>
-void RapidJsonConfigReader::SetValue(
-    rapidjson::Value value,
-    rapidjson::Value& object,
-    std::string_view current_key,
-    const std::vector<std::string_view>& additional_keys
-) {
-  // Check for the existence of the key-value and add the value if this is the
-  // destination key.
-  if (!object.HasMember(current_key.data()) && additional_keys.empty()) {
-    rapidjson::Value copy_key(
-        current_key.data(),
-        this->json_document_.GetAllocator()
-    );
-
-    object.AddMember(
-        copy_key,
-        std::move(value),
-        this->json_document_.GetAllocator()
-    );
-
-    return;
-  }
-
-  // If this is the destination key, then set the value and return.
-  rapidjson::Value& entry = object[current_key.data()];
-
-  if (additional_keys.empty()) {
-    entry = std::move(value);
-    return;
-  }
-
-  // Otherwise, recurse one level down.
-  std::vector<std::string_view> remaining_keys(
-      std::make_move_iterator(additional_keys.begin() + 1),
-      std::make_move_iterator(additional_keys.end())
-  );
-
-  return SetValue(
-      std::move(value),
-      entry,
-      additional_keys.front(),
-      remaining_keys
-  );
-}
-
-template <>
-void RapidJsonConfigReader::SetDeepValue(
-    rapidjson::Value value,
-    rapidjson::Value& object,
-    std::string_view current_key,
-    const std::vector<std::string_view>& additional_keys
-) {
-  // Check for the existence of the key-value and add if needed.
-  if (!object.HasMember(current_key.data())) {
-    rapidjson::Value current_value = (additional_keys.size() == 0)
-        ? std::move(value)
-        : rapidjson::Value(rapidjson::kObjectType);
-
-    rapidjson::Value copy_key(
-        current_key.data(),
-        this->json_document_.GetAllocator()
-    );
-
-    object.AddMember(
-        copy_key,
-        std::move(current_value),
-        this->json_document_.GetAllocator()
-    );
-
-    // Return if this is the destination key.
-    if (additional_keys.empty()) {
-      return;
-    }
-  }
-
-  // If this is the destination key, then set the value and return.
-  rapidjson::Value& entry = object[current_key.data()];
-
-  if (additional_keys.empty()) {
-    entry = std::move(value);
-    return;
-  }
-
-  // Otherwise, recurse one level down.
-  std::vector<std::string_view> remaining_keys(
-      std::make_move_iterator(additional_keys.begin() + 1),
-      std::make_move_iterator(additional_keys.end())
-  );
-
-  return SetDeepValue(
-      std::move(value),
-      entry,
-      additional_keys.front(),
-      remaining_keys
-  );
-}
-
-template <>
-bool RapidJsonConfigReader::ContainsKey(
-    const rapidjson::Value& object,
-    std::string_view current_key,
-    const std::vector<std::string_view>& additional_keys
+    const Args&... additional_keys
 ) const {
   // Check for the existence of the key-value.
   if (!object.HasMember(current_key.data())) {
     return false;
   }
 
-  // If this is the destination key, then return the value.
-  const rapidjson::Value& entry = object[current_key.data()];
-
-  if (additional_keys.size() == 0) {
+  // If this is the destination key, then return the value. Otherwise, recurse
+  // one level down.
+  if constexpr (sizeof...(additional_keys) <= 0) {
     return true;
+  } else {
+    const rapidjson::Value& value_ref = object[current_key.data()];
+
+    return this->ContainsKeyRecursive(
+        value_ref,
+        additional_keys...
+    );
   }
-
-  // Otherwise, recurse one level down.
-  std::vector<std::string_view> remaining_keys(
-      std::make_move_iterator(additional_keys.begin() + 1),
-      std::make_move_iterator(additional_keys.end())
-  );
-
-  return ContainsKey(
-      entry,
-      additional_keys.front(),
-      remaining_keys
-  );
 }
 
 template <>
-RapidJsonConfigReader::GenericConfigReader(
-    std::filesystem::path config_file_path
-) : config_file_path_(std::move(config_file_path)) {
+template <typename ...Args>
+rapidjson::Value& RapidJsonConfigReader::GetValueRefRecursive(
+    rapidjson::Value& object,
+    std::string_view current_key,
+    const Args&... additional_keys
+) {
+  // If this is the destination key, then return the value. Otherwise, recurse
+  // one level down.
+  rapidjson::Value& value_ref = object[current_key.data()];
+
+  if constexpr (sizeof...(additional_keys)) {
+    return value_ref;
+  } else {
+    return this->GetValueRef(
+        value_ref,
+        additional_keys...
+    );
+  }
+}
+
+template <>
+template <typename ...Args>
+const rapidjson::Value& RapidJsonConfigReader::GetValueRefRecursive(
+    const rapidjson::Value& object,
+    std::string_view current_key,
+    const Args&... additional_keys
+) const {
+  // If this is the destination key, then return the value. Otherwise, recurse
+  // one level down.
+  const rapidjson::Value& value_ref = object[current_key.data()];
+
+  if constexpr (sizeof...(additional_keys) <= 0) {
+    return value_ref;
+  } else {
+    return this->GetValueRefRecursive(
+        value_ref,
+        additional_keys...
+    );
+  }
+}
+
+template <>
+template <typename ...Args>
+void RapidJsonConfigReader::SetValueRecursive(
+    rapidjson::Value value,
+    rapidjson::Value& object,
+    std::string_view current_key,
+    const Args&... additional_keys
+) {
+  // If this is the destination key, then set the value. Otherwise, recurse
+  // one level down.
+  rapidjson::Value& value_ref = object[current_key.data()];
+
+  if constexpr (sizeof...(additional_keys) <= 0) {
+    // Check for the existence of the key-value and add the value if this is the
+    // destination key.
+    if (object.HasMember(current_key.data())) {
+      rapidjson::Value& value_ref = object[current_key.data()];
+      value_ref = std::move(value);
+    } else {
+      rapidjson::Value copy_key(
+          current_key.data(),
+          this->json_document_.GetAllocator()
+      );
+
+      object.AddMember(
+          copy_key,
+          std::move(value),
+          this->json_document_.GetAllocator()
+      );
+    }
+  } else {
+    this->SetValue(
+        std::move(value),
+        value_ref,
+        additional_keys...
+    );
+  }
+}
+
+template <>
+template <typename ...Args>
+void RapidJsonConfigReader::SetDeepValueRecursive(
+    rapidjson::Value value,
+    rapidjson::Value& object,
+    std::string_view current_key,
+    const Args&... additional_keys
+) {
+    // If this is the destination key, then set the value. Otherwise, recurse
+  // one level down.
+  rapidjson::Value& value_ref = object[current_key.data()];
+
+  if constexpr (sizeof...(additional_keys) <= 0) {
+    // Check for the existence of the key-value and add the value if this is the
+    // destination key.
+    if (object.HasMember(current_key.data())) {
+      rapidjson::Value& value_ref = object[current_key.data()];
+      value_ref = std::move(value);
+    } else {
+      rapidjson::Value copy_key(
+          current_key.data(),
+          this->json_document_.GetAllocator()
+      );
+
+      object.AddMember(
+          copy_key,
+          std::move(value),
+          this->json_document_.GetAllocator()
+      );
+    }
+  } else {
+    // Check for the existence of the key-value and add an object if the
+    // object does not exist.
+    if (!object.HasMember(current_key.data())) {
+      rapidjson::Value copy_key(
+          current_key.data(),
+          this->json_document_.GetAllocator()
+      );
+
+      object.AddMember(
+          copy_key,
+          rapidjson::Value(rapidjson::kObjectType),
+          this->json_document_.GetAllocator()
+      );
+    }
+
+    this->SetDeepValueRecursive(
+        std::move(value),
+        value_ref,
+        additional_keys...
+    );
+  }
 }
 
 template <>

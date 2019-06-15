@@ -831,36 +831,41 @@ class GenericConfigReader {
   std::filesystem::path config_file_path_;
   JsonDocument json_document_;
 
-  JsonValue& GetValueRef(
+  template <typename ...Args>
+  bool ContainsKeyRecursive(
+      const JsonObject& object,
+      std::string_view current_key,
+      const Args&... additional_keys
+  ) const;
+
+  template <typename ...Args>
+  JsonValue& GetValueRefRecursive(
       JsonObject& object,
       std::string_view current_key,
-      const std::vector<std::string_view>& additional_keys
+      const Args&... additional_keys
   );
 
-  const JsonValue& GetValueRef(
+  template <typename ...Args>
+  const JsonValue& GetValueRefRecursive(
       const JsonObject& object,
       std::string_view current_key,
-      const std::vector<std::string_view>& additional_keys
+      const Args&... additional_keys
   ) const;
 
-  bool ContainsKey(
-      const JsonObject& object,
-      std::string_view current_key,
-      const std::vector<std::string_view>& additional_keys
-  ) const;
-
-  void SetValue(
+  template <typename ...Args>
+  void SetValueRecursive(
       JsonValue value,
       JsonObject& object,
       std::string_view current_key,
-      const std::vector<std::string_view>& additional_keys
+      const Args&... additional_keys
   );
 
-  void SetDeepValue(
+  template <typename ...Args>
+  void SetDeepValueRecursive(
       JsonValue value,
       JsonObject& object,
       std::string_view current_key,
-      const std::vector<std::string_view>& additional_keys
+      const Args&... additional_keys
   );
 };
 

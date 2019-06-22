@@ -87,7 +87,8 @@ Container RapidJsonConfigReader::GetArrayCopy(
 
   Container container;
   if constexpr (std::is_same<Container::value_type, std::string>::value
-      || std::is_same<Container::value_type, std::string_view>::value) {
+      || std::is_same<Container::value_type, std::string_view>::value
+      || std::is_same<Container::value_type, std::filesystem::path>::value) {
     for (rapidjson::Value::ConstValueIterator it = array_ref.begin(); it != array_ref.end(); it++) {
       container.insert(
           container.end(),
@@ -121,6 +122,13 @@ void RapidJsonConfigReader::SetArray(
     for (Iter it = first; it != last; it += 1) {
       json_array.PushBack(
           rapidjson::Value(it->data(), this->json_document_.GetAllocator()),
+          this->json_document_.GetAllocator()
+      );
+    }
+  } else if constexpr (std::is_same<Iter::value_type, std::filesystem::path>::value) {
+    for (Iter it = first; it != last; it += 1) {
+      json_array.PushBack(
+          rapidjson::Value(it->u8string().data(), this->json_document_.GetAllocator()),
           this->json_document_.GetAllocator()
       );
     }
@@ -162,6 +170,13 @@ void RapidJsonConfigReader::SetDeepArray(
     for (Iter it = first; it != last; it++) {
       json_array.PushBack(
           rapidjson::Value(it->data(), this->json_document_.GetAllocator()),
+          this->json_document_.GetAllocator()
+      );
+    }
+  } else if constexpr (std::is_same<Iter::value_type, std::filesystem::path>::value) {
+    for (Iter it = first; it != last; it += 1) {
+      json_array.PushBack(
+          rapidjson::Value(it->u8string().data(), this->json_document_.GetAllocator()),
           this->json_document_.GetAllocator()
       );
     }

@@ -1812,9 +1812,8 @@ void RapidJsonConfigReader::SetDeepValueRecursive(
     std::string_view current_key,
     const Args&... additional_keys
 ) {
-    // If this is the destination key, then set the value. Otherwise, recurse
+  // If this is the destination key, then set the value. Otherwise, recurse
   // one level down.
-  rapidjson::Value& value_ref = object[current_key.data()];
 
   if constexpr (sizeof...(additional_keys) <= 0) {
     // Check for the existence of the key-value and add the value if this is the
@@ -1849,6 +1848,8 @@ void RapidJsonConfigReader::SetDeepValueRecursive(
           this->json_document_.GetAllocator()
       );
     }
+
+    rapidjson::Value& value_ref = object[current_key.data()];
 
     this->SetDeepValueRecursive(
         std::move(value),

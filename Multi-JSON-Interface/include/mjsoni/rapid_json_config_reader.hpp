@@ -48,13 +48,16 @@ inline RapidJsonConfigReader::GenericConfigReader(
 template <>
 template <typename ...Args>
 bool RapidJsonConfigReader::ContainsKey(
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   return this->ContainsKeyRecursive(
       this->json_document(),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -62,25 +65,31 @@ template <>
 template <typename ...Args>
 const RapidJsonConfigReader::JsonValue&
 RapidJsonConfigReader::GetValueRef(
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   return this->GetValueRefRecursive(
       this->json_document_,
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
 template <>
 template <typename Container, typename ...Args>
 Container RapidJsonConfigReader::GetArrayCopy(
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   const rapidjson::Value& value_ref = this->GetValueRef(
-      first_key,
-      additional_keys...
+      keys...
   );
 
   const rapidjson::Value::ConstArray& array_ref = value_ref.GetArray();
@@ -112,9 +121,17 @@ template <typename Iter, typename ...Args>
 void RapidJsonConfigReader::SetArray(
     Iter first,
     Iter last,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  const rapidjson::Value& value_ref = this->GetValueRef(
+      keys...
+  );
+
   rapidjson::Value json_array(rapidjson::kArrayType);
 
   if constexpr (std::is_same<Iter::value_type, std::string>::value
@@ -128,7 +145,7 @@ void RapidJsonConfigReader::SetArray(
   } else if constexpr (std::is_same<Iter::value_type, std::filesystem::path>::value) {
     for (Iter it = first; it != last; it += 1) {
       json_array.PushBack(
-          rapidjson::Value(it->u8string().data(), this->json_document_.GetAllocator()),
+          rapidjson::Value(it->string().data(), this->json_document_.GetAllocator()),
           this->json_document_.GetAllocator()
       );
     }
@@ -148,8 +165,7 @@ void RapidJsonConfigReader::SetArray(
 
   this->SetValue(
       std::move(json_array),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -158,9 +174,13 @@ template <typename Iter, typename ...Args>
 void RapidJsonConfigReader::SetDeepArray(
     Iter first,
     Iter last,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   rapidjson::Value json_array(rapidjson::kArrayType);
 
   if constexpr (std::is_same<Iter::value_type, char*>::value
@@ -176,7 +196,7 @@ void RapidJsonConfigReader::SetDeepArray(
   } else if constexpr (std::is_same<Iter::value_type, std::filesystem::path>::value) {
     for (Iter it = first; it != last; it += 1) {
       json_array.PushBack(
-          rapidjson::Value(it->u8string().data(), this->json_document_.GetAllocator()),
+          rapidjson::Value(it->string().data(), this->json_document_.GetAllocator()),
           this->json_document_.GetAllocator()
       );
     }
@@ -196,8 +216,7 @@ void RapidJsonConfigReader::SetDeepArray(
 
   this->SetDeepValue(
       std::move(json_array),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -205,14 +224,17 @@ template <>
 template <typename ...Args>
 void RapidJsonConfigReader::SetValue(
     RapidJsonConfigReader::JsonValue value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetValueRecursive(
       std::move(value),
       this->json_document_,
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -220,14 +242,17 @@ template <>
 template <typename ...Args>
 void RapidJsonConfigReader::SetDeepValue(
     RapidJsonConfigReader::JsonValue value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetDeepValueRecursive(
       std::move(value),
       this->json_document_,
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -236,12 +261,15 @@ void RapidJsonConfigReader::SetDeepValue(
 template <>
 template <typename ...Args>
 bool RapidJsonConfigReader::GetBool(
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   const rapidjson::Value& value_ref = this->GetValueRef(
-      first_key,
-      additional_keys...
+      keys...
   );
 
   return value_ref.GetBool();
@@ -251,29 +279,36 @@ template <>
 template <typename ...Args>
 bool RapidJsonConfigReader::GetBoolOrDefault(
     bool default_value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->HasBool(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->HasBool(keys...)) {
     return default_value;
   }
 
-  return this->GetBool(first_key, additional_keys...);
+  return this->GetBool(keys...);
 }
 
 template <>
 template <typename ...Args>
 bool RapidJsonConfigReader::HasBool(
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->ContainsKey(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->ContainsKey(keys...)) {
     return false;
   }
 
   const rapidjson::Value& value_ref = this->GetValueRef(
-      first_key,
-      additional_keys...
+      keys...
   );
 
   return value_ref.IsBool();
@@ -283,13 +318,16 @@ template <>
 template <typename ...Args>
 void RapidJsonConfigReader::SetBool(
     bool value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetValue(
       rapidjson::Value(value),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -297,13 +335,16 @@ template <>
 template <typename ...Args>
 void RapidJsonConfigReader::SetDeepBool(
     bool value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetDeepValue(
       rapidjson::Value(value),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -312,12 +353,15 @@ void RapidJsonConfigReader::SetDeepBool(
 template <>
 template <typename T, typename ...Args>
 std::deque<T> RapidJsonConfigReader::GetDeque(
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   return this->GetArrayCopy<std::deque<T>>(
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -325,43 +369,54 @@ template <>
 template <typename T, typename ...Args>
 std::deque<T> RapidJsonConfigReader::GetDequeOrDefault(
     const std::deque<T>& default_value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->HasDeque(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->HasDeque(keys...)) {
     return default_value;
   }
 
-  return this->GetDeque<T>(first_key, additional_keys...);
+  return this->GetDeque<T>(keys...);
 }
 
 template <>
 template <typename T, typename ...Args>
 std::deque<T> RapidJsonConfigReader::GetDequeOrDefault(
     std::deque<T>&& default_value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->HasDeque(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->HasDeque(keys...)) {
     return std::move(default_value);
   }
 
-  return this->GetDeque<T>(first_key, additional_keys...);
+  return this->GetDeque<T>(keys...);
 }
 
 template <>
 template <typename ...Args>
 bool RapidJsonConfigReader::HasDeque(
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->ContainsKey(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->ContainsKey(keys...)) {
     return false;
   }
 
   const rapidjson::Value& value_ref = this->GetValueRef(
-      first_key,
-      additional_keys...
+      keys...
   );
 
   return value_ref.IsArray();
@@ -371,14 +426,17 @@ template <>
 template <typename T, typename ...Args>
 void RapidJsonConfigReader::SetDeque(
     const std::deque<T>& value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetArray(
       value.cbegin(),
       value.cend(),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -386,14 +444,17 @@ template <>
 template <typename T, typename ...Args>
 void RapidJsonConfigReader::SetDeque(
     std::deque<T>&& value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetArray(
       std::make_move_iterator(value.begin()),
       std::make_move_iterator(value.end()),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -401,14 +462,17 @@ template <>
 template <typename T, typename ...Args>
 void RapidJsonConfigReader::SetDeepDeque(
     const std::deque<T>& value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetDeepArray(
       value.cbegin(),
       value.cend(),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -416,14 +480,17 @@ template <>
 template <typename T, typename ...Args>
 void RapidJsonConfigReader::SetDeepDeque(
     std::deque<T>&& value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetDeepArray(
       std::make_move_iterator(value.begin()),
       std::make_move_iterator(value.end()),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -432,12 +499,15 @@ void RapidJsonConfigReader::SetDeepDeque(
 template <>
 template <typename ...Args>
 int RapidJsonConfigReader::GetInt(
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   const rapidjson::Value& value_ref = this->GetValueRef(
-      first_key,
-      additional_keys...
+      keys...
   );
 
   return value_ref.GetInt();
@@ -447,29 +517,36 @@ template <>
 template <typename ...Args>
 int RapidJsonConfigReader::GetIntOrDefault(
     int default_value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->HasInt(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->HasInt(keys...)) {
     return default_value;
   }
 
-  return this->GetInt(first_key, additional_keys...);
+  return this->GetInt(keys...);
 }
 
 template <>
 template <typename ...Args>
 bool RapidJsonConfigReader::HasInt(
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->ContainsKey(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->ContainsKey(keys...)) {
     return false;
   }
 
   const rapidjson::Value& value_ref = this->GetValueRef(
-      first_key,
-      additional_keys...
+      keys...
   );
 
   return value_ref.IsInt();
@@ -479,13 +556,16 @@ template <>
 template <typename ...Args>
 void RapidJsonConfigReader::SetInt(
     int value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetValue(
       rapidjson::Value(value),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -493,13 +573,16 @@ template <>
 template <typename ...Args>
 void RapidJsonConfigReader::SetDeepInt(
     int value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetDeepValue(
       rapidjson::Value(value),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -508,12 +591,15 @@ void RapidJsonConfigReader::SetDeepInt(
 template <>
 template <typename ...Args>
 std::int32_t RapidJsonConfigReader::GetInt32(
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   const rapidjson::Value& value_ref = this->GetValueRef(
-      first_key,
-      additional_keys...
+      keys...
   );
 
   return value_ref.GetInt();
@@ -523,29 +609,36 @@ template <>
 template <typename ...Args>
 std::int32_t RapidJsonConfigReader::GetInt32OrDefault(
     std::int32_t default_value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->HasInt32(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->HasInt32(keys...)) {
     return default_value;
   }
 
-  return this->GetInt32(first_key, additional_keys...);
+  return this->GetInt32(keys...);
 }
 
 template <>
 template <typename ...Args>
 bool RapidJsonConfigReader::HasInt32(
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->ContainsKey(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->ContainsKey(keys...)) {
     return false;
   }
 
   const rapidjson::Value& value_ref = this->GetValueRef(
-      first_key,
-      additional_keys...
+      keys...
   );
 
   return value_ref.IsInt();
@@ -555,13 +648,16 @@ template <>
 template <typename ...Args>
 void RapidJsonConfigReader::SetInt32(
     std::int32_t value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetValue(
       rapidjson::Value(value),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -569,13 +665,16 @@ template <>
 template <typename ...Args>
 void RapidJsonConfigReader::SetDeepInt32(
     std::int32_t value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetDeepValue(
       rapidjson::Value(value),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -584,12 +683,15 @@ void RapidJsonConfigReader::SetDeepInt32(
 template <>
 template <typename ...Args>
 std::int64_t RapidJsonConfigReader::GetInt64(
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   const rapidjson::Value& value_ref = this->GetValueRef(
-      first_key,
-      additional_keys...
+      keys...
   );
 
   return value_ref.GetInt64();
@@ -599,27 +701,34 @@ template <>
 template <typename ...Args>
 std::int64_t RapidJsonConfigReader::GetInt64OrDefault(
     std::int64_t default_value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->HasInt64(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->HasInt64(keys...)) {
     return default_value;
   }
 
-  return this->GetInt64(first_key, additional_keys...);
+  return this->GetInt64(keys...);
 }
 
 template <>
 template <typename ...Args>
 void RapidJsonConfigReader::SetInt64(
     std::int64_t value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetValue(
       rapidjson::Value(value),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -627,13 +736,16 @@ template <>
 template <typename ...Args>
 void RapidJsonConfigReader::SetDeepInt64(
     std::int64_t value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetDeepValue(
       rapidjson::Value(value),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -642,12 +754,15 @@ void RapidJsonConfigReader::SetDeepInt64(
 template <>
 template <typename ...Args>
 long RapidJsonConfigReader::GetLong(
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   const rapidjson::Value& value_ref = this->GetValueRef(
-      first_key,
-      additional_keys...
+      keys...
   );
 
   return value_ref.GetInt();
@@ -657,27 +772,34 @@ template <>
 template <typename ...Args>
 long RapidJsonConfigReader::GetLongOrDefault(
     long default_value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->HasLong(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->HasLong(keys...)) {
     return default_value;
   }
 
-  return this->GetLong(first_key, additional_keys...);
+  return this->GetLong(keys...);
 }
 
 template <>
 template <typename ...Args>
 void RapidJsonConfigReader::SetLong(
     long value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetValue(
       rapidjson::Value(value),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -685,13 +807,16 @@ template <>
 template <typename ...Args>
 void RapidJsonConfigReader::SetDeepLong(
     long value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetDeepValue(
       rapidjson::Value(value),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -700,12 +825,15 @@ void RapidJsonConfigReader::SetDeepLong(
 template <>
 template <typename ...Args>
 long long RapidJsonConfigReader::GetLongLong(
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   const rapidjson::Value& value_ref = this->GetValueRef(
-      first_key,
-      additional_keys...
+      keys...
   );
 
   return value_ref.GetInt64();
@@ -715,27 +843,34 @@ template <>
 template <typename ...Args>
 long long RapidJsonConfigReader::GetLongLongOrDefault(
     long long default_value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->HasLongLong(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->HasLongLong(keys...)) {
     return default_value;
   }
 
-  return this->GetLongLong(first_key, additional_keys...);
+  return this->GetLongLong(keys...);
 }
 
 template <>
 template <typename ...Args>
 void RapidJsonConfigReader::SetLongLong(
     long long value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetValue(
       rapidjson::Value(value),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -743,13 +878,16 @@ template <>
 template <typename ...Args>
 void RapidJsonConfigReader::SetDeepLongLong(
     long long value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetDeepValue(
       rapidjson::Value(value),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -758,54 +896,68 @@ void RapidJsonConfigReader::SetDeepLongLong(
 template <>
 template <typename ...Args>
 std::filesystem::path RapidJsonConfigReader::GetPath(
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  std::string value = this->GetString(
-      first_key,
-      additional_keys...
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
   );
 
-  return std::filesystem::u8path(std::move(value));
+  std::string value = this->GetString(
+      keys...
+  );
+
+  return std::filesystem::path(std::move(value));
 }
 
 template <>
 template <typename ...Args>
 std::filesystem::path RapidJsonConfigReader::GetPathOrDefault(
     const std::filesystem::path& default_value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->HasPath(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->HasPath(keys...)) {
     return default_value;
   }
 
-  return this->GetPath(first_key, additional_keys...);
+  return this->GetPath(keys...);
 }
 
 template <>
 template <typename ...Args>
 std::filesystem::path RapidJsonConfigReader::GetPathOrDefault(
     std::filesystem::path&& default_value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->HasPath(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->HasPath(keys...)) {
     return std::move(default_value);
   }
 
-  return this->GetPath(first_key, additional_keys...);
+  return this->GetPath(keys...);
 }
 
 template <>
 template <typename ...Args>
 bool RapidJsonConfigReader::HasPath(
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   return this->HasString(
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -813,13 +965,16 @@ template <>
 template <typename ...Args>
 void RapidJsonConfigReader::SetPath(
     const std::filesystem::path& value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetString(
-      value.u8string(),
-      first_key,
-      additional_keys...
+      value.string(),
+      keys...
   );
 }
 
@@ -827,13 +982,16 @@ template <>
 template <typename ...Args>
 void RapidJsonConfigReader::SetDeepPath(
     const std::filesystem::path& value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetDeepString(
-      value.u8string(),
-      first_key,
-      additional_keys...
+      value.string(),
+      keys...
   );
 }
 
@@ -842,12 +1000,15 @@ void RapidJsonConfigReader::SetDeepPath(
 template <>
 template <typename T, typename ...Args>
 std::set<T> RapidJsonConfigReader::GetSet(
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   return this->GetArrayCopy<std::set<T>>(
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -855,43 +1016,54 @@ template <>
 template <typename T, typename ...Args>
 std::set<T> RapidJsonConfigReader::GetSetOrDefault(
     const std::set<T>& default_value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->HasSet(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->HasSet(keys...)) {
     return default_value;
   }
 
-  return this->GetSet<T>(first_key, additional_keys...);
+  return this->GetSet<T>(keys...);
 }
 
 template <>
 template <typename T, typename ...Args>
 std::set<T> RapidJsonConfigReader::GetSetOrDefault(
     std::set<T>&& default_value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->HasSet(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->HasSet(keys...)) {
     return std::move(default_value);
   }
 
-  return this->GetSet<T>(first_key, additional_keys...);
+  return this->GetSet<T>(keys...);
 }
 
 template <>
 template <typename ...Args>
 bool RapidJsonConfigReader::HasSet(
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->ContainsKey(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->ContainsKey(keys...)) {
     return false;
   }
 
   const rapidjson::Value& value_ref = this->GetValueRef(
-      first_key,
-      additional_keys...
+      keys...
   );
 
   return value_ref.IsArray();
@@ -901,14 +1073,17 @@ template <>
 template <typename T, typename ...Args>
 void RapidJsonConfigReader::SetSet(
     const std::set<T>& value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetArray(
       value.cbegin(),
       value.cend(),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -916,14 +1091,17 @@ template <>
 template <typename T, typename ...Args>
 void RapidJsonConfigReader::SetSet(
     std::set<T>&& value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetArray(
       std::make_move_iterator(value.begin()),
       std::make_move_iterator(value.end()),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -931,14 +1109,17 @@ template <>
 template <typename T, typename ...Args>
 void RapidJsonConfigReader::SetDeepSet(
     const std::set<T>& value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetDeepArray(
       value.cbegin(),
       value.cend(),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -946,14 +1127,17 @@ template <>
 template <typename T, typename ...Args>
 void RapidJsonConfigReader::SetDeepSet(
     std::set<T>&& value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetDeepArray(
       std::make_move_iterator(value.begin()),
       std::make_move_iterator(value.end()),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -962,12 +1146,15 @@ void RapidJsonConfigReader::SetDeepSet(
 template <>
 template <typename ...Args>
 std::string RapidJsonConfigReader::GetString(
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   const rapidjson::Value& value_ref = this->GetValueRef(
-      first_key,
-      additional_keys...
+      keys...
   );
 
   return value_ref.GetString();
@@ -977,43 +1164,54 @@ template <>
 template <typename ...Args>
 std::string RapidJsonConfigReader::GetStringOrDefault(
     const std::string& default_value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->HasString(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->HasString(keys...)) {
     return default_value;
   }
 
-  return this->GetString(first_key, additional_keys...);
+  return this->GetString(keys...);
 }
 
 template <>
 template <typename ...Args>
 std::string RapidJsonConfigReader::GetStringOrDefault(
     std::string&& default_value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->HasString(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->HasString(keys...)) {
     return std::move(default_value);
   }
 
-  return this->GetString(first_key, additional_keys...);
+  return this->GetString(keys...);
 }
 
 template <>
 template <typename ...Args>
 bool RapidJsonConfigReader::HasString(
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->ContainsKey(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->ContainsKey(keys...)) {
     return false;
   }
 
   const rapidjson::Value& value_ref = this->GetValueRef(
-      first_key,
-      additional_keys...
+      keys...
   );
 
   return value_ref.GetString();
@@ -1023,13 +1221,16 @@ template <>
 template <typename ...Args>
 void RapidJsonConfigReader::SetString(
     const std::string& value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetValue(
       rapidjson::Value(value.data(), this->json_document_.GetAllocator()),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -1037,13 +1238,16 @@ template <>
 template <typename ...Args>
 void RapidJsonConfigReader::SetString(
     std::string&& value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetValue(
       rapidjson::Value(value.data(), this->json_document_.GetAllocator()),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -1051,13 +1255,16 @@ template <>
 template <typename ...Args>
 void RapidJsonConfigReader::SetDeepString(
     const std::string& value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetDeepValue(
       rapidjson::Value(value.data(), this->json_document_.GetAllocator()),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -1065,13 +1272,16 @@ template <>
 template <typename ...Args>
 void RapidJsonConfigReader::SetDeepString(
     std::string&& value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetDeepValue(
       rapidjson::Value(value.data(), this->json_document_.GetAllocator()),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -1080,12 +1290,15 @@ void RapidJsonConfigReader::SetDeepString(
 template <>
 template <typename ...Args>
 unsigned int RapidJsonConfigReader::GetUnsignedInt(
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   const rapidjson::Value& value_ref = this->GetValueRef(
-      first_key,
-      additional_keys...
+      keys...
   );
 
   return value_ref.GetUint();
@@ -1095,29 +1308,36 @@ template <>
 template <typename ...Args>
 unsigned int RapidJsonConfigReader::GetUnsignedIntOrDefault(
     unsigned int default_value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->HasUnsignedInt(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->HasUnsignedInt(keys...)) {
     return default_value;
   }
 
-  return this->GetUnsignedInt(first_key, additional_keys...);
+  return this->GetUnsignedInt(keys...);
 }
 
 template <>
 template <typename ...Args>
 bool RapidJsonConfigReader::HasUnsignedInt(
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->ContainsKey(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->ContainsKey(keys...)) {
     return false;
   }
 
   const rapidjson::Value& value_ref = this->GetValueRef(
-      first_key,
-      additional_keys...
+      keys...
   );
 
   return value_ref.IsUint();
@@ -1127,13 +1347,16 @@ template <>
 template <typename ...Args>
 void RapidJsonConfigReader::SetUnsignedInt(
     unsigned int value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetValue(
       rapidjson::Value(value),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -1141,13 +1364,16 @@ template <>
 template <typename ...Args>
 void RapidJsonConfigReader::SetDeepUnsignedInt(
     unsigned int value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetDeepValue(
       rapidjson::Value(value),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -1156,12 +1382,15 @@ void RapidJsonConfigReader::SetDeepUnsignedInt(
 template <>
 template <typename ...Args>
 std::uint32_t RapidJsonConfigReader::GetUnsignedInt32(
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   const rapidjson::Value& value_ref = this->GetValueRef(
-      first_key,
-      additional_keys...
+      keys...
   );
 
   return value_ref.GetUint();
@@ -1171,29 +1400,36 @@ template <>
 template <typename ...Args>
 std::uint32_t RapidJsonConfigReader::GetUnsignedInt32OrDefault(
     std::uint32_t default_value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->HasUnsignedInt32(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->HasUnsignedInt32(keys...)) {
     return default_value;
   }
 
-  return this->GetUnsignedInt32(first_key, additional_keys...);
+  return this->GetUnsignedInt32(keys...);
 }
 
 template <>
 template <typename ...Args>
 bool RapidJsonConfigReader::HasUnsignedInt32(
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->ContainsKey(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->ContainsKey(keys...)) {
     return false;
   }
 
   const rapidjson::Value& value_ref = this->GetValueRef(
-      first_key,
-      additional_keys...
+      keys...
   );
 
   return value_ref.IsUint();
@@ -1203,13 +1439,16 @@ template <>
 template <typename ...Args>
 void RapidJsonConfigReader::SetUnsignedInt32(
     std::uint32_t value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetValue(
       rapidjson::Value(value),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -1217,13 +1456,16 @@ template <>
 template <typename ...Args>
 void RapidJsonConfigReader::SetDeepUnsignedInt32(
     std::uint32_t value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetDeepValue(
       rapidjson::Value(value),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -1232,12 +1474,15 @@ void RapidJsonConfigReader::SetDeepUnsignedInt32(
 template <>
 template <typename ...Args>
 std::uint64_t RapidJsonConfigReader::GetUnsignedInt64(
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   const rapidjson::Value& value_ref = this->GetValueRef(
-      first_key,
-      additional_keys...
+      keys...
   );
 
   return value_ref.GetInt64();
@@ -1247,29 +1492,36 @@ template <>
 template <typename ...Args>
 std::uint64_t RapidJsonConfigReader::GetUnsignedInt64OrDefault(
     std::uint64_t default_value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->HasUnsignedInt64(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->HasUnsignedInt64(keys...)) {
     return default_value;
   }
 
-  return this->GetUnsignedInt64(first_key, additional_keys...);
+  return this->GetUnsignedInt64(keys...);
 }
 
 template <>
 template <typename ...Args>
 bool RapidJsonConfigReader::HasUnsignedInt64(
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->ContainsKey(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->ContainsKey(keys...)) {
     return false;
   }
 
   const rapidjson::Value& value_ref = this->GetValueRef(
-      first_key,
-      additional_keys...
+      keys...
   );
 
   return value_ref.IsUint64();
@@ -1279,13 +1531,16 @@ template <>
 template <typename ...Args>
 void RapidJsonConfigReader::SetUnsignedInt64(
     std::uint64_t value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetValue(
       rapidjson::Value(value),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -1293,13 +1548,16 @@ template <>
 template <typename ...Args>
 void RapidJsonConfigReader::SetDeepUnsignedInt64(
     std::uint64_t value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetDeepValue(
       rapidjson::Value(value),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -1308,12 +1566,15 @@ void RapidJsonConfigReader::SetDeepUnsignedInt64(
 template <>
 template <typename ...Args>
 unsigned long RapidJsonConfigReader::GetUnsignedLong(
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   const rapidjson::Value& value_ref = this->GetValueRef(
-      first_key,
-      additional_keys...
+      keys...
   );
 
   return value_ref.GetUint();
@@ -1323,29 +1584,36 @@ template <>
 template <typename ...Args>
 unsigned long RapidJsonConfigReader::GetUnsignedLongOrDefault(
     unsigned long default_value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->HasUnsignedLong(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->HasUnsignedLong(keys...)) {
     return default_value;
   }
 
-  return this->GetUnsignedLong(first_key, additional_keys...);
+  return this->GetUnsignedLong(keys...);
 }
 
 template <>
 template <typename ...Args>
 bool RapidJsonConfigReader::HasUnsignedLong(
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->ContainsKey(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->ContainsKey(keys...)) {
     return false;
   }
 
   const rapidjson::Value& value_ref = this->GetValueRef(
-      first_key,
-      additional_keys...
+      keys...
   );
 
   return value_ref.IsUint();
@@ -1355,13 +1623,16 @@ template <>
 template <typename ...Args>
 void RapidJsonConfigReader::SetUnsignedLong(
     unsigned long value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetValue(
       rapidjson::Value(static_cast<unsigned int>(value)),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -1369,13 +1640,16 @@ template <>
 template <typename ...Args>
 void RapidJsonConfigReader::SetDeepUnsignedLong(
     unsigned long value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetDeepValue(
       rapidjson::Value(static_cast<unsigned int>(value)),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -1384,12 +1658,15 @@ void RapidJsonConfigReader::SetDeepUnsignedLong(
 template <>
 template <typename ...Args>
 unsigned long long RapidJsonConfigReader::GetUnsignedLongLong(
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   const rapidjson::Value& value_ref = this->GetValueRef(
-      first_key,
-      additional_keys...
+      keys...
   );
 
   return value_ref.GetUint64();
@@ -1399,29 +1676,36 @@ template <>
 template <typename ...Args>
 unsigned long long RapidJsonConfigReader::GetUnsignedLongLongOrDefault(
     unsigned long long default_value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->HasUnsignedLongLong(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->HasUnsignedLongLong(keys...)) {
     return default_value;
   }
 
-  return this->GetUnsignedLongLong(first_key, additional_keys...);
+  return this->GetUnsignedLongLong(keys...);
 }
 
 template <>
 template <typename ...Args>
 bool RapidJsonConfigReader::HasUnsignedLongLong(
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->ContainsKey(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->ContainsKey(keys...)) {
     return false;
   }
 
   const rapidjson::Value& value_ref = this->GetValueRef(
-      first_key,
-      additional_keys...
+      keys...
   );
 
   return value_ref.IsUint64();
@@ -1431,13 +1715,16 @@ template <>
 template <typename ...Args>
 void RapidJsonConfigReader::SetUnsignedLongLong(
     unsigned long long value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetValue(
       rapidjson::Value(value),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -1445,13 +1732,16 @@ template <>
 template <typename ...Args>
 void RapidJsonConfigReader::SetDeepUnsignedLongLong(
     unsigned long long value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetDeepValue(
       rapidjson::Value(value),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -1460,12 +1750,15 @@ void RapidJsonConfigReader::SetDeepUnsignedLongLong(
 template <>
 template <typename T, typename ...Args>
 std::unordered_set<T> RapidJsonConfigReader::GetUnorderedSet(
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   return this->GetArrayCopy<std::unordered_set<T>>(
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -1473,43 +1766,54 @@ template <>
 template <typename T, typename ...Args>
 std::unordered_set<T> RapidJsonConfigReader::GetUnorderedSetOrDefault(
     const std::unordered_set<T>& default_value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->HasUnorderedSet(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->HasUnorderedSet(keys...)) {
     return default_value;
   }
 
-  return this->GetUnorderedSet<T>(first_key, additional_keys...);
+  return this->GetUnorderedSet<T>(keys...);
 }
 
 template <>
 template <typename T, typename ...Args>
 std::unordered_set<T> RapidJsonConfigReader::GetUnorderedSetOrDefault(
     std::unordered_set<T>&& default_value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->HasUnorderedSet(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->HasUnorderedSet(keys...)) {
     return std::move(default_value);
   }
 
-  return this->GetUnorderedSet<T>(first_key, additional_keys...);
+  return this->GetUnorderedSet<T>(keys...);
 }
 
 template <>
 template <typename ...Args>
 bool RapidJsonConfigReader::HasUnorderedSet(
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->ContainsKey(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->ContainsKey(keys...)) {
     return false;
   }
 
   const rapidjson::Value& value_ref = this->GetValueRef(
-      first_key,
-      additional_keys...
+      keys...
   );
 
   return value_ref.IsArray();
@@ -1519,14 +1823,17 @@ template <>
 template <typename T, typename ...Args>
 void RapidJsonConfigReader::SetUnorderedSet(
     const std::unordered_set<T>& value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetArray(
       value.cbegin(),
       value.cend(),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -1534,14 +1841,17 @@ template <>
 template <typename T, typename ...Args>
 void RapidJsonConfigReader::SetUnorderedSet(
     std::unordered_set<T>&& value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetArray(
       std::make_move_iterator(value.begin()),
       std::make_move_iterator(value.end()),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -1549,14 +1859,17 @@ template <>
 template <typename T, typename ...Args>
 void RapidJsonConfigReader::SetDeepUnorderedSet(
     const std::unordered_set<T>& value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetDeepArray(
       value.cbegin(),
       value.cend(),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -1564,14 +1877,17 @@ template <>
 template <typename T, typename ...Args>
 void RapidJsonConfigReader::SetDeepUnorderedSet(
     std::unordered_set<T>&& value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetDeepArray(
       std::make_move_iterator(value.begin()),
       std::make_move_iterator(value.end()),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -1580,12 +1896,15 @@ void RapidJsonConfigReader::SetDeepUnorderedSet(
 template <>
 template <typename T, typename ...Args>
 std::vector<T> RapidJsonConfigReader::GetVector(
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   return this->GetArrayCopy<std::vector<T>>(
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -1593,43 +1912,54 @@ template <>
 template <typename T, typename ...Args>
 std::vector<T> RapidJsonConfigReader::GetVectorOrDefault(
     const std::vector<T>& default_value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->ContainsKey(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->ContainsKey(keys...)) {
     return default_value;
   }
 
-  return this->GetVector<T>(first_key, additional_keys...);
+  return this->GetVector<T>(keys...);
 }
 
 template <>
 template <typename T, typename ...Args>
 std::vector<T> RapidJsonConfigReader::GetVectorOrDefault(
     std::vector<T>&& default_value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->ContainsKey(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->ContainsKey(keys...)) {
     return std::move(default_value);
   }
 
-  return this->GetVector<T>(first_key, additional_keys...);
+  return this->GetVector<T>(keys...);
 }
 
 template <>
 template <typename ...Args>
 bool RapidJsonConfigReader::HasVector(
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
-  if (!this->ContainsKey(first_key, additional_keys...)) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
+  if (!this->ContainsKey(keys...)) {
     return false;
   }
 
   const rapidjson::Value& value_ref = this->GetValueRef(
-      first_key,
-      additional_keys...
+      keys...
   );
 
   return value_ref.IsArray();
@@ -1639,14 +1969,17 @@ template <>
 template <typename T, typename ...Args>
 void RapidJsonConfigReader::SetVector(
     const std::vector<T>& value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetArray(
       value.cbegin(),
       value.cend(),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -1654,14 +1987,17 @@ template <>
 template <typename T, typename ...Args>
 void RapidJsonConfigReader::SetVector(
     std::vector<T>&& value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetArray(
       std::make_move_iterator(value.begin()),
       std::make_move_iterator(value.end()),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -1669,14 +2005,17 @@ template <>
 template <typename T, typename ...Args>
 void RapidJsonConfigReader::SetDeepVector(
     const std::vector<T>& value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetDeepArray(
       value.cbegin(),
       value.cend(),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -1684,14 +2023,17 @@ template <>
 template <typename T, typename ...Args>
 void RapidJsonConfigReader::SetDeepVector(
     std::vector<T>&& value,
-    std::string_view first_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
+  static_assert(
+      sizeof...(keys) >= 1,
+      "Number of keys must be greater than 1."
+  );
+
   this->SetDeepArray(
       std::make_move_iterator(value.begin()),
       std::make_move_iterator(value.end()),
-      first_key,
-      additional_keys...
+      keys...
   );
 }
 
@@ -1702,7 +2044,7 @@ template <typename ...Args>
 bool RapidJsonConfigReader::ContainsKeyRecursive(
     const rapidjson::Value& object,
     std::string_view current_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
   // Check for the existence of the key-value.
   if (!object.HasMember(current_key.data())) {
@@ -1711,14 +2053,14 @@ bool RapidJsonConfigReader::ContainsKeyRecursive(
 
   // If this is the destination key, then return the value. Otherwise, recurse
   // one level down.
-  if constexpr (sizeof...(additional_keys) <= 0) {
+  if constexpr (sizeof...(keys) <= 0) {
     return true;
   } else {
     const rapidjson::Value& value_ref = object[current_key.data()];
 
     return this->ContainsKeyRecursive(
         value_ref,
-        additional_keys...
+        keys...
     );
   }
 }
@@ -1728,18 +2070,18 @@ template <typename ...Args>
 rapidjson::Value& RapidJsonConfigReader::GetValueRefRecursive(
     rapidjson::Value& object,
     std::string_view current_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
   // If this is the destination key, then return the value. Otherwise, recurse
   // one level down.
   rapidjson::Value& value_ref = object[current_key.data()];
 
-  if constexpr (sizeof...(additional_keys)) {
+  if constexpr (sizeof...(keys)) {
     return value_ref;
   } else {
     return this->GetValueRef(
         value_ref,
-        additional_keys...
+        keys...
     );
   }
 }
@@ -1749,18 +2091,18 @@ template <typename ...Args>
 const rapidjson::Value& RapidJsonConfigReader::GetValueRefRecursive(
     const rapidjson::Value& object,
     std::string_view current_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) const {
   // If this is the destination key, then return the value. Otherwise, recurse
   // one level down.
   const rapidjson::Value& value_ref = object[current_key.data()];
 
-  if constexpr (sizeof...(additional_keys) <= 0) {
+  if constexpr (sizeof...(keys) <= 0) {
     return value_ref;
   } else {
     return this->GetValueRefRecursive(
         value_ref,
-        additional_keys...
+        keys...
     );
   }
 }
@@ -1771,13 +2113,13 @@ void RapidJsonConfigReader::SetValueRecursive(
     rapidjson::Value value,
     rapidjson::Value& object,
     std::string_view current_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
   // If this is the destination key, then set the value. Otherwise, recurse
   // one level down.
   rapidjson::Value& value_ref = object[current_key.data()];
 
-  if constexpr (sizeof...(additional_keys) <= 0) {
+  if constexpr (sizeof...(keys) <= 0) {
     // Check for the existence of the key-value and add the value if this is the
     // destination key.
     if (object.HasMember(current_key.data())) {
@@ -1799,7 +2141,7 @@ void RapidJsonConfigReader::SetValueRecursive(
     this->SetValue(
         std::move(value),
         value_ref,
-        additional_keys...
+        keys...
     );
   }
 }
@@ -1810,12 +2152,12 @@ void RapidJsonConfigReader::SetDeepValueRecursive(
     rapidjson::Value value,
     rapidjson::Value& object,
     std::string_view current_key,
-    const Args&... additional_keys
+    const Args&... keys
 ) {
   // If this is the destination key, then set the value. Otherwise, recurse
   // one level down.
 
-  if constexpr (sizeof...(additional_keys) <= 0) {
+  if constexpr (sizeof...(keys) <= 0) {
     // Check for the existence of the key-value and add the value if this is the
     // destination key.
     if (object.HasMember(current_key.data())) {
@@ -1854,7 +2196,7 @@ void RapidJsonConfigReader::SetDeepValueRecursive(
     this->SetDeepValueRecursive(
         std::move(value),
         value_ref,
-        additional_keys...
+        keys...
     );
   }
 }
@@ -1865,7 +2207,7 @@ inline bool RapidJsonConfigReader::Read() {
   if (!std::filesystem::exists(this->config_file_path())) {
     if (std::ofstream config_stream(this->config_file_path());
         config_stream) {
-      config_stream << u8"{}" << std::endl;
+      config_stream << "{}" << std::endl;
     } else {
       return false;
     }

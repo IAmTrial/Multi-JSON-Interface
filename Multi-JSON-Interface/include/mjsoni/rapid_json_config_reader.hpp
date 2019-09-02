@@ -2138,7 +2138,7 @@ void RapidJsonConfigReader::SetValueRecursive(
       );
     }
   } else {
-    this->SetValue(
+    this->SetValueRecursive(
         std::move(value),
         value_ref,
         keys...

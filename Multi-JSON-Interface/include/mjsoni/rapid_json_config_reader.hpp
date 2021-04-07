@@ -2222,6 +2222,12 @@ inline bool RapidJsonConfigReader::Read() {
     return false;
   }
 
+  // Check that the config is JSON compliant. If it isn't, then the
+  // document is read in as null.
+  if (this->json_document_.IsNull()) {
+    return false;
+  }
+
   return true;
 }
 

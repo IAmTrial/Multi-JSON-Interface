@@ -710,11 +710,11 @@ class GenericConfigReader {
 
   /* Getter and Setters */
 
-  const std::filesystem::path& config_file_path() const noexcept {
+  constexpr const std::filesystem::path& config_file_path() const noexcept {
     return this->config_file_path_;
   }
 
-  const JsonDocument& json_document() const noexcept {
+  constexpr const JsonDocument& json_document() const noexcept {
     return this->json_document_;
   }
 
